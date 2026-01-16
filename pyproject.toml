@@ -1,0 +1,16 @@
+[project]
+name = "py-get-hdc"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pymysql>=1.1.2",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+    "schedule>=1.2.2",
+]
+
+[project.scripts]
+py-get-hdc = "py_get_hdc:main"
+scheduler = "scheduler:main"
