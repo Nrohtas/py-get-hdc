@@ -14,7 +14,7 @@ def run_job():
     try:
         # ใช้ python ของ environment ปัจจุบันรัน script
         # เพื่อให้แน่ใจว่าใช้ dependencies เดียวกัน
-        result = subprocess.run([sys.executable, "py_get_hdc.py"], capture_output=False, text=True)
+        result = subprocess.run([sys.executable, "py-get-hdc.py"], capture_output=False, text=True)
         if result.returncode == 0:
             print("✅ งานเสร็จสมบูรณ์")
         else:

@@ -12,5 +12,4 @@ dependencies = [
 ]
 
 [project.scripts]
-py-get-hdc = "py_get_hdc:main"
 scheduler = "scheduler:main"

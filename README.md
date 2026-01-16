@@ -25,11 +25,7 @@ DB_NAME=43files
 
 **รันผ่านสคริปต์หลักทันที:**
 ```bash
-uv run py-get-hdc
-```
-หรือ
-```bash
-uv run py_get_hdc.py
+uv run py-get-hdc.py
 ```
 
 **รันผ่าน Scheduler (เพื่อรันตามเวลาที่กำหนด):**
@@ -42,6 +38,6 @@ uv run scheduler.py
 ```
 
 ## โครงสร้างโปรเจกต์
-- `py_get_hdc.py`: สคริปต์หลักในการดึงข้อมูลและบันทึกฐานข้อมูล
+- `py-get-hdc.py`: สคริปต์หลักในการดึงข้อมูลและบันทึกฐานข้อมูล
 - `scheduler.py`: ระบบตั้งเวลารันงานอัตโนมัติ
 - `pyproject.toml`: การตั้งค่าโปรเจกต์และ dependencies
