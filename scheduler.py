@@ -5,8 +5,8 @@ import sys
 from datetime import datetime, timedelta
 
 # กำหนดเวลาที่ต้องการรัน (24-hour format)
-TARGET_HOUR = 22
-TARGET_MINUTE = 22
+TARGET_HOUR = 12
+TARGET_MINUTE = 00
 
 def run_job():
     """ฟังก์ชันสำหรับรันงาน"""
