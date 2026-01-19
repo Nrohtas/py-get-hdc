@@ -262,7 +262,7 @@ def create_log_table_if_not_exists(connection):
     with connection.cursor() as cursor:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS hdc_api (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                api_id INT AUTO_INCREMENT PRIMARY KEY,
                 h_count INT COMMENT 'จำนวน hospcode',
                 h_y INT DEFAULT 0 COMMENT 'จำนวน status Y',
                 h_n INT DEFAULT 0 COMMENT 'จำนวน status N',
@@ -279,8 +279,8 @@ def log_api_run(h_count, h_y, h_n):
             create_log_table_if_not_exists(connection)
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "INSERT INTO hdc_api (h_count, h_y, h_n, d_update) VALUES (%s, %s, %s, NOW())",
-                    (h_count, h_y, h_n)
+                    "INSERT INTO hdc_api (h_count, h_y, h_n, d_update) VALUES (%s, %s, %s, %s)",
+                    (h_count, h_y, h_n, datetime.now())
                 )
             connection.commit()
             print(f"📝 บันทึก Log สำเร็จ: h_count={h_count}, h_y={h_y}, h_n={h_n}")
