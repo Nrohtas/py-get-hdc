@@ -3,6 +3,7 @@
 """
 
 import os
+import sys
 import requests
 import pymysql
 from dotenv import load_dotenv
@@ -24,42 +25,56 @@ DB_CONFIG = {
 
 # API configuration
 API_URL = "https://opendata.moph.go.th/api/report_data"
-API_PAYLOAD = {
-    "tableName": "s_opd_all",
-    "year": "2569",
-    "province": "65",
-    "type": "json"
-}
+DEFAULT_YEARS = ["2570", "2569"]
 
 
-def fetch_data_from_api():
+def fetch_data_from_api(year="2570"):
     """ดึงข้อมูลจาก MOPH Open Data API"""
+    payload = {
+        "tableName": "s_opd_all",
+        "year": str(year),
+        "province": "65",
+        "type": "json"
+    }
     print(f"🔄 กำลังดึงข้อมูลจาก API: {API_URL}")
-    print(f"   Payload: {API_PAYLOAD}")
+    print(f"   Payload: {payload}")
     
     try:
         response = requests.post(
             API_URL,
-            json=API_PAYLOAD,
-            headers={"Content-Type": "application/json"},
+            json=payload,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            },
             timeout=60
         )
         response.raise_for_status()
         
-        data = response.json()
-        print(f"✅ ดึงข้อมูลสำเร็จ: {len(data)} รายการ")
+        res_json = response.json()
+        if isinstance(res_json, dict) and "data" in res_json:
+            data = res_json["data"]
+        elif isinstance(res_json, list):
+            data = res_json
+        else:
+            data = []
+            
+        print(f"✅ ดึงข้อมูลสำเร็จ: {len(data)} รายการ (ปีงบ {year})")
         return data
         
     except requests.exceptions.RequestException as e:
-        print(f"❌ เกิดข้อผิดพลาดในการดึงข้อมูล: {e}")
+        print(f"❌ เกิดข้อผิดพลาดในการดึงข้อมูลปี {year}: {e}")
         return None
 
 
 def upsert_to_database(data):
     """บันทึกข้อมูลลงฐานข้อมูลแบบ upsert (INSERT ... ON DUPLICATE KEY UPDATE)"""
+    if isinstance(data, dict) and "data" in data:
+        data = data["data"]
+
     if not data:
         print("⚠️ ไม่มีข้อมูลสำหรับบันทึก")
-        return 0
+        return 0, 0, 0
     
     print(f"🔄 กำลังบันทึกข้อมูล {len(data)} รายการลงฐานข้อมูล...")
     
@@ -240,38 +255,49 @@ def main():
     print(f"🕐 เวลา: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
     
-    # ดึงข้อมูลจาก API
-    data = fetch_data_from_api()
+    target_years = sys.argv[1:] if len(sys.argv) > 1 else DEFAULT_YEARS
+    print(f"🎯 ปีงบประมาณที่จะ sync: {', '.join(target_years)}")
     
-    if data:
-        # บันทึกลงฐานข้อมูล
-        total, h_y, h_n = upsert_to_database(data)
+    grand_total = 0
+    for year in target_years:
+        print("-" * 50)
+        print(f"📌 กำลังประมวลผลปีงบประมาณ: {year}")
+        data = fetch_data_from_api(year=year)
         
-        if total > 0:
-            print("=" * 60)
-            print(f"🎉 เสร็จสิ้น! บันทึกข้อมูลทั้งหมด {total} รายการ")
-            print("=" * 60)
-            
-            # บันทึก Log การทำงาน
-            log_api_run(len(data), h_y, h_n)
+        if data:
+            total, h_y, h_n = upsert_to_database(data)
+            grand_total += total
+            if total > 0:
+                print(f"🎉 เสร็จสิ้นปี {year}! บันทึกข้อมูล {total} รายการ")
+                log_api_run(year, len(data), h_y, h_n)
+            else:
+                print(f"⚠️ ไม่สามารถบันทึกข้อมูลปี {year} ได้")
         else:
-            print("❌ ไม่สามารถบันทึกข้อมูลได้")
+            print(f"⚠️ ไม่พบข้อมูลของปี {year} จาก API")
+            
+    print("=" * 60)
+    print(f"🏁 สรุปการทำงาน: บันทึกข้อมูลรวมทั้งหมด {grand_total} รายการ")
+    print("=" * 60)
 
 def create_log_table_if_not_exists(connection):
-    """สร้างตาราง hdc_api ถ้ายังไม่มี"""
+    """สร้างตาราง hdc_api ถ้ายังไม่มี และเพิ่มคอลัมน์ b_year ถ้ายังไม่มี"""
     with connection.cursor() as cursor:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS hdc_api (
                 api_id INT AUTO_INCREMENT PRIMARY KEY,
+                b_year VARCHAR(4) DEFAULT NULL COMMENT 'ปีงบประมาณ',
                 h_count INT COMMENT 'จำนวน hospcode',
                 h_y INT DEFAULT 0 COMMENT 'จำนวน status Y',
                 h_n INT DEFAULT 0 COMMENT 'จำนวน status N',
                 d_update DATETIME COMMENT 'วันเวลาที่บันทึก'
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """)
+        cursor.execute("SHOW COLUMNS FROM hdc_api LIKE 'b_year'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE hdc_api ADD COLUMN b_year VARCHAR(4) DEFAULT NULL AFTER api_id")
     connection.commit()
 
-def log_api_run(h_count, h_y, h_n):
+def log_api_run(year, h_count, h_y, h_n):
     """บันทึก Log การทำงานลงตาราง hdc_api"""
     try:
         connection = pymysql.connect(**DB_CONFIG)
@@ -279,11 +305,11 @@ def log_api_run(h_count, h_y, h_n):
             create_log_table_if_not_exists(connection)
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "INSERT INTO hdc_api (h_count, h_y, h_n, d_update) VALUES (%s, %s, %s, %s)",
-                    (h_count, h_y, h_n, datetime.now())
+                    "INSERT INTO hdc_api (b_year, h_count, h_y, h_n, d_update) VALUES (%s, %s, %s, %s, %s)",
+                    (str(year), h_count, h_y, h_n, datetime.now())
                 )
             connection.commit()
-            print(f"📝 บันทึก Log สำเร็จ: h_count={h_count}, h_y={h_y}, h_n={h_n}")
+            print(f"📝 บันทึก Log สำเร็จ: year={year}, h_count={h_count}, h_y={h_y}, h_n={h_n}")
     except pymysql.Error as e:
         print(f"❌ ไม่สามารถบันทึก Log ได้: {e}")
 

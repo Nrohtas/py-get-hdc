@@ -20,21 +20,32 @@ DB_PASSWORD=your_password
 DB_NAME=43files
 ```
 
-### 3. รันสคริปต์
-คุณสามารถรันได้หลายวิธี:
+### 3. รันสคริปต์ Sync ข้อมูล
 
-**รันผ่านสคริปต์หลักทันที:**
-```bash
-uv run py-get-hdc.py
-```
+คุณสามารถเลือกรัน sync แยกปี หรือรันพร้อมกันได้:
 
-**รันผ่าน Scheduler (เพื่อรันตามเวลาที่กำหนด):**
+**Sync แยกปี 2570 (ปีงบปัจจุบัน):**
 ```bash
-uv run scheduler
+uv run python py-get-hdc.py 2570
 ```
-หรือ
+หรือดับเบิลคลิกที่ไฟล์ `sync-2570.bat`
+
+**Sync แยกปี 2569:**
 ```bash
-uv run scheduler.py
+uv run python py-get-hdc.py 2569
+```
+หรือดับเบิลคลิกที่ไฟล์ `sync-2569.bat`
+
+**Sync ทั้งสองปีพร้อมกัน (2570 และ 2569):**
+```bash
+uv run python py-get-hdc.py
+```
+หรือดับเบิลคลิกที่ไฟล์ `sync-all.bat`
+
+### 4. รันระบบตั้งเวลาอัตโนมัติ (Scheduler)
+รันวันละ 2 รอบตามเวลา **09:09 น.** และ **16:16 น.**:
+```bash
+uv run python scheduler.py
 ```
 
 ## โครงสร้างโปรเจกต์

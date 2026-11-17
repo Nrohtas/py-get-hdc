@@ -4,9 +4,11 @@ import os
 import sys
 from datetime import datetime, timedelta
 
-# กำหนดเวลาที่ต้องการรัน (24-hour format)
-TARGET_HOUR = 12
-TARGET_MINUTE = 00
+# กำหนดเวลาที่ต้องการรัน 2 เวลาต่อวัน (24-hour format)
+TARGET_TIMES = [
+    (9, 9),    # รอบเช้า 09:09 น.
+    (16, 16),  # รอบเย็น 16:16 น.
+]
 
 def run_job():
     """ฟังก์ชันสำหรับรันงาน"""
@@ -27,35 +29,26 @@ def main():
     print(f"⏳ เริ่มต้นระบบ Scheduler")
     current_time = datetime.now()
     print(f"🕒 เวลาปัจจุบันของระบบ: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"🎯 เป้าหมาย: รันทุกวันเวลา {TARGET_HOUR:02d}:{TARGET_MINUTE:02d}")
+    times_str = ", ".join([f"{h:02d}:{m:02d}" for h, m in TARGET_TIMES])
+    print(f"🎯 เป้าหมาย: รันทุกวันเวลา {times_str} น.")
     print("=" * 60)
 
-    last_run_date = None
-
-    # ตรวจสอบว่าเวลาที่กำหนดผ่านไปหรือยังสำหรับวันนี้
-    target_time = current_time.replace(hour=TARGET_HOUR, minute=TARGET_MINUTE, second=0, microsecond=0)
-    if current_time > target_time:
-         print(f"⚠️ คำเตือน: เวลา {TARGET_HOUR:02d}:{TARGET_MINUTE:02d} ของวันนี้ผ่านไปแล้ว (ระบบจะรันพรุ่งนี้)")
-         print(f"   หรือคุณแก้ไข TARGET_HOUR/MINUTE บันทึกไฟล์ และรันสคริปต์ใหม่")
+    last_run_slot = None
 
     while True:
         now = datetime.now()
+        current_hm = (now.hour, now.minute)
         
-        # แสดงสถานะแบบ Real-time (ทุก 1 นาที หรือเมื่อถึงเวลา)
-        # ตรวจสอบว่าเป็นเวลาที่กำหนดหรือไม่ (ตรวจสอบช่วง 0-59 วินาทีของนาทีนั้น)
-        if (now.hour == TARGET_HOUR and 
-            now.minute == TARGET_MINUTE and 
-            last_run_date != now.date()):
-            
+        # ตรวจสอบว่าเป็นเวลาที่กำหนดในรอบวันนี้หรือไม่
+        if current_hm in TARGET_TIMES and last_run_slot != (now.date(), current_hm):
+            print(f"\n⏰ ถึงเวลารันรอบ: {now.hour:02d}:{now.minute:02d} น.")
             run_job()
-            last_run_date = now.date()
+            last_run_slot = (now.date(), current_hm)
             
-            # รอ 65 วินาทีเพื่อป้องกันการรันซ้ำ
-            print("💤 รอรอบถัดไปในอีก 24 ชั่วโมง...")
+            # รอ 65 วินาทีเพื่อป้องกันการรันซ้ำในนาทีเดียวกัน
+            print(f"💤 จบรอบ {now.hour:02d}:{now.minute:02d} น. กำลังรอรอบถัดไป...")
             time.sleep(65)
         else:
-            # Debug: แสดงเวลาทุกๆ 10 วินาที เพื่อให้รู้ว่า Script ทำงานอยู่
-            # print(f"⏳ Waiting... Current time: {now.strftime('%H:%M:%S')}", end='\r')
             time.sleep(5)
 
 if __name__ == "__main__":
